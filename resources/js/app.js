@@ -1,1 +1,1 @@
-//
+import './nid-extractor';

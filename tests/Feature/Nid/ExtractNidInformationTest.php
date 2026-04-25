@@ -62,4 +62,22 @@ class ExtractNidInformationTest extends TestCase
             ->assertStatus(422)
             ->assertJsonValidationErrors(['front_image', 'back_image']);
     }
+
+    public function test_it_accepts_heic_and_heif_uploads(): void
+    {
+        $this->app->instance(OcrEngine::class, new class implements OcrEngine
+        {
+            public function extractText(string $imagePath, string $languages): string
+            {
+                return 'Name: TEST USER';
+            }
+        });
+
+        $response = $this->postJson('/api/v1/nid/extract', [
+            'front_image' => UploadedFile::fake()->create('front.heic', 100, 'image/heic'),
+            'back_image' => UploadedFile::fake()->create('back.heif', 100, 'image/heif'),
+        ]);
+
+        $response->assertOk();
+    }
 }

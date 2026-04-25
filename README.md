@@ -56,3 +56,50 @@ If you discover a security vulnerability within Laravel, please send an e-mail t
 ## License
 
 The Laravel framework is open-sourced software licensed under the [MIT license](https://opensource.org/licenses/MIT).
+
+## NID OCR API (Cheapest Path)
+
+This project includes local OCR API for Bangladeshi NID extraction using free `tesseract` engine (no per-request API bill).
+
+### Endpoint
+
+- `POST /api/v1/nid/extract`
+- form-data:
+- `front_image` (required, image)
+- `back_image` (required, image)
+- `ocr_languages` (optional, default `ben+eng`)
+- allowed image extensions: `heic`, `heif`, `jpg`, `jpeg`, `jepg`, `png`, `webp`
+
+### Local setup
+
+1. Install Tesseract OCR binary.
+2. Install Bangla and English language data (`ben`, `eng`).
+3. Configure `.env`:
+
+```env
+NID_OCR_DRIVER=tesseract
+NID_TESSERACT_BINARY=tesseract
+NID_OCR_LANGUAGES=ben+eng
+NID_TESSERACT_PSM=6
+NID_UPLOAD_DISK=local
+NID_UPLOAD_DIRECTORY=nid-uploads
+NID_UPLOAD_MAX_SIZE_KB=10240
+```
+
+### Verify OCR runtime
+
+Run:
+
+```bash
+php artisan nid:ocr-check
+```
+
+If command returns missing language, install that traineddata before running API.
+
+### Quick test
+
+```bash
+curl -X POST http://127.0.0.1:8000/api/v1/nid/extract \
+  -F "front_image=@/absolute/path/front.jpg" \
+  -F "back_image=@/absolute/path/back.jpg"
+```

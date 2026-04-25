@@ -1,0 +1,65 @@
+<?php
+
+namespace Tests\Feature\Nid;
+
+use App\Application\Nid\Contracts\OcrEngine;
+use Illuminate\Http\UploadedFile;
+use Tests\TestCase;
+
+class ExtractNidInformationTest extends TestCase
+{
+    public function test_it_extracts_nid_information_from_front_and_back_images(): void
+    {
+        $this->app->instance(OcrEngine::class, new class implements OcrEngine
+        {
+            private int $calls = 0;
+
+            public function extractText(string $imagePath, string $languages): string
+            {
+                $texts = [
+                    <<<TEXT
+                    Name: MD RAKIB HASAN
+                    নাম: মোঃ রাকিব হাসান
+                    Father's Name: MD ABDUL KADER
+                    পিতার নাম: মোঃ আব্দুল কাদের
+                    Date of Birth: 12/05/1995
+                    National ID No: 19951234567890123
+                    Blood Group: B+
+                    TEXT,
+                    <<<TEXT
+                    Address: House 12, Road 3, Dhaka
+                    ঠিকানা: বাড়ি ১২, সড়ক ৩, ঢাকা
+                    Mother's Name: MST RAHIMA BEGUM
+                    মাতার নাম: মোছাঃ রহিমা বেগম
+                    Date of Issue: 01/01/2024
+                    TEXT,
+                ];
+
+                return $texts[$this->calls++] ?? '';
+            }
+        });
+
+        $response = $this->postJson('/api/v1/nid/extract', [
+            'front_image' => UploadedFile::fake()->image('front.jpg'),
+            'back_image' => UploadedFile::fake()->image('back.jpg'),
+        ]);
+
+        $response
+            ->assertOk()
+            ->assertJsonPath('data.nid_number', '19951234567890123')
+            ->assertJsonPath('data.name.en', 'MD RAKIB HASAN')
+            ->assertJsonPath('data.name.bn', 'মোঃ রাকিব হাসান')
+            ->assertJsonPath('data.blood_group', 'B+')
+            ->assertJsonPath('data.date_of_birth', '12/05/1995')
+            ->assertJsonPath('data.issue_date', '01/01/2024');
+    }
+
+    public function test_it_validates_required_images(): void
+    {
+        $response = $this->postJson('/api/v1/nid/extract', []);
+
+        $response
+            ->assertStatus(422)
+            ->assertJsonValidationErrors(['front_image', 'back_image']);
+    }
+}
